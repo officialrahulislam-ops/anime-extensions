@@ -1,0 +1,221 @@
+name: Personal 7MMTV build and publish
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - 'src/en/sevenmmtv/**'
+      - '.github/workflows/personal-build.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: personal-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Speeds the build up a lot: only our extension is compiled.
+      - name: Keep only the 7MMTV extension
+        run: find src -mindepth 2 -maxdepth 2 -type d ! -path 'src/en/sevenmmtv' -exec rm -rf {} +
+
+      # Same signing key every time, so new builds install over old ones.
+      - name: Use fixed signing key
+        run: |
+          mkdir -p ~/.android
+          base64 -d > ~/.android/debug.keystore <<'KEYEOF'
+          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
+          KEYEOF
+      - name: Build APK
+        run: ./gradlew --no-daemon :src:en:sevenmmtv:assembleDebug
+
+      - name: Create repository files and validate index
+        run: |
+          cat > make_index.py <<'PYEOF'
+          #!/usr/bin/env python3
+          """Build the personal extension repository (apk/, icon/, index.json, index.min.json) from one built APK.
+
+          Schema (per extension entry): name, pkg, apk, lang, code, version, nsfw, sources[{name, lang, id, baseUrl}]
+          This follows the format produced by the upstream create-repo.py (aapt metadata + source list).
+          """
+          import argparse, glob, hashlib, json, os, re, shutil, subprocess, sys, zipfile
+
+          BASE_URL = "https://7mmtv.sx"
+          SOURCE_NAME = "7MMTV"
+
+
+          def find_aapt():
+              path = shutil.which("aapt")
+              if path:
+                  return path
+              sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT") or ""
+              cands = sorted(glob.glob(os.path.join(sdk, "build-tools", "*", "aapt")))
+              if not cands:
+                  sys.exit("aapt not found (Android SDK build-tools missing)")
+              return cands[-1]
+
+
+          def source_id(name, lang, version_id=1):
+              key = f"{name.lower()}/{lang}/{version_id}"
+              digest = hashlib.md5(key.encode()).digest()
+              return int.from_bytes(digest[:8], "big") & 0x7FFFFFFFFFFFFFFF
+
+
+          def main():
+              ap = argparse.ArgumentParser()
+              ap.add_argument("--apk-dir", required=True)
+              ap.add_argument("--out", required=True)
+              ap.add_argument("--repo-url", default="")
+              a = ap.parse_args()
+
+              apks = glob.glob(os.path.join(a.apk_dir, "*.apk"))
+              if len(apks) != 1:
+                  sys.exit(f"expected exactly one APK in {a.apk_dir}, found {apks}")
+              apk = apks[0]
+
+              badging = subprocess.run([find_aapt(), "dump", "badging", apk], capture_output=True, text=True, check=True).stdout
+              pkg = re.search(r"package: name='([^']+)'", badging).group(1)
+              code = int(re.search(r"versionCode='([^']+)'", badging).group(1))
+              version = re.search(r"versionName='([^']+)'", badging).group(1)
+              label = re.search(r"^application-label:'([^']+)'", badging, re.M).group(1)
+              icon_path = re.search(r"^application-icon-320:'([^']+)'", badging, re.M).group(1)
+              nsfw_m = re.search(r"'tachiyomi\.animeextension\.nsfw' value='([^']+)'", badging)
+              nsfw = int(nsfw_m.group(1)) if nsfw_m else 0
+
+              m = re.match(r"eu\.kanade\.tachiyomi\.animeextension\.([^.]+)\.([^.]+)$", pkg)
+              if not m:
+                  sys.exit(f"unexpected package name: {pkg}")
+              lang, short = m.group(1), m.group(2)
+
+              out = a.out
+              shutil.rmtree(out, ignore_errors=True)
+              os.makedirs(os.path.join(out, "apk"))
+              os.makedirs(os.path.join(out, "icon"))
+              apk_name = f"aniyomi-{lang}.{short}-v{version}.apk"
+              shutil.copy(apk, os.path.join(out, "apk", apk_name))
+              with zipfile.ZipFile(apk) as z:
+                  with open(os.path.join(out, "icon", f"{pkg}.png"), "wb") as f:
+                      f.write(z.read(icon_path))
+
+              index = [{
+                  "name": label,
+                  "pkg": pkg,
+                  "apk": apk_name,
+                  "lang": lang,
+                  "code": code,
+                  "version": version,
+                  "nsfw": nsfw,
+                  "sources": [{"name": SOURCE_NAME, "lang": lang, "id": str(source_id(SOURCE_NAME, lang)), "baseUrl": BASE_URL}],
+              }]
+              with open(os.path.join(out, "index.json"), "w", encoding="utf-8") as f:
+                  json.dump(index, f, ensure_ascii=False, indent=2)
+              with open(os.path.join(out, "index.min.json"), "w", encoding="utf-8") as f:
+                  json.dump(index, f, ensure_ascii=False, separators=(",", ":"))
+
+              # ---- validation: fail the build instead of publishing a broken index
+              with open(os.path.join(out, "index.min.json"), encoding="utf-8") as f:
+                  data = json.load(f)
+              required = {"name", "pkg", "apk", "lang", "code", "version", "nsfw", "sources"}
+              assert isinstance(data, list) and data, "index must be a non-empty list"
+              for e in data:
+                  assert required <= set(e), f"missing keys: {required - set(e)}"
+                  assert os.path.isfile(os.path.join(out, "apk", e["apk"])), "apk file missing"
+                  assert os.path.getsize(os.path.join(out, "apk", e["apk"])) > 10_000, "apk suspiciously small"
+                  for s in e["sources"]:
+                      assert {"name", "lang", "id", "baseUrl"} <= set(s), "bad source entry"
+              print(f"OK: {pkg} {version} (code {code}), apk {apk_name}, nsfw={nsfw}")
+              if a.repo_url:
+                  print(f"Repository URL: {a.repo_url}/index.min.json")
+
+
+          if __name__ == "__main__":
+              main()
+          PYEOF
+          python3 make_index.py \
+            --apk-dir src/en/sevenmmtv/build/outputs/apk/debug \
+            --out dist \
+            --repo-url "https://raw.githubusercontent.com/${{ github.repository }}/repo"
+      - name: Publish to the repo branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd dist
+          git init -b repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Publish ${GITHUB_SHA::7}"
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" repo:repo
+
+      - name: Check the published index is reachable
+        run: |
+          URL="https://raw.githubusercontent.com/${{ github.repository }}/repo/index.min.json"
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "$URL" -o /tmp/index.min.json; then
+              python3 -c "import json;d=json.load(open('/tmp/index.min.json'));print('Index OK:',d[0]['pkg'],d[0]['version'])"
+              echo "Repository URL: $URL"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Could not download $URL - the repository must be public for Zangetsu to read it."
+          exit 1
+
+      - name: Keep the APK as a build artifact too
+        uses: actions/upload-artifact@v4
+        with:
+          name: sevenmmtv-apk
+          path: dist/apk/*.apk
