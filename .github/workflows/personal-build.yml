@@ -83,7 +83,9 @@ jobs:
           XbCAl9ZppJBOl0+61x0NV0ZIGRTjlk0PHROvA/hW4gKxTdyXOZ4RAA==
           KEYEOF
       - name: Build APK
-        run: ./gradlew --no-daemon :src:en:sevenmmtv:assembleDebug
+        run: |
+          ./gradlew --no-daemon :src:en:sevenmmtv:spotlessApply
+          ./gradlew --no-daemon :src:en:sevenmmtv:assembleDebug
 
       - name: Create repository files and validate index
         run: |
