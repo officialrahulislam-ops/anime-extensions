@@ -1,7 +1,8 @@
 ext {
     extName = '7MMTV'
     extClass = '.SevenMMTV'
-    extVersionCode = 1
+    extVersionCode = 2
+    libVersion = 16
     isNsfw = true
 }
 

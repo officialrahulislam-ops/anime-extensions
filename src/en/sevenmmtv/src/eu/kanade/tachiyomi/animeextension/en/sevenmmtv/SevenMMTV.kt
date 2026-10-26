@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.animeextension.en.sevenmmtv
 import android.util.Log
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
+import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
@@ -170,9 +171,13 @@ class SevenMMTV : AnimeHttpSource() {
         )
     }
 
-    // ---------- Videos ----------
+    // ---------- Seasons (not used: every video is one episode) ----------
 
-    override fun videoListParse(response: Response): List<Video> {
+    override fun seasonListParse(response: Response): List<SAnime> = emptyList()
+
+    // ---------- Servers (SP / SW / VH buttons) ----------
+
+    override fun hosterListParse(response: Response): List<Hoster> {
         val html = response.body.string()
         var servers = SiteDecoder.parseServers(html)
         if (servers.isEmpty()) {
@@ -182,16 +187,18 @@ class SevenMMTV : AnimeHttpSource() {
             }
         }
         // VH first (verified), then the rest.
-        val ordered = servers.sortedBy { if (it.label == "VH") 0 else 1 }
-        val videos = mutableListOf<Video>()
-        for (server in ordered) {
-            try {
-                videos += extractor.videosFrom(server.label, server.embedUrl)
-            } catch (e: Exception) {
-                Log.e("7MMTV", "Server ${server.label} failed: ${e.message}")
-            }
-        }
-        return videos
+        return servers
+            .sortedBy { if (it.label == "VH") 0 else 1 }
+            .map { Hoster(hosterUrl = it.embedUrl, hosterName = it.label) }
+    }
+
+    // ---------- Videos of one server ----------
+
+    override suspend fun getVideoList(hoster: Hoster): List<Video> = try {
+        extractor.videosFrom(hoster.hosterName, hoster.hosterUrl)
+    } catch (e: Exception) {
+        Log.e("7MMTV", "Server ${hoster.hosterName} failed: ${e.message}")
+        emptyList()
     }
 
     companion object {

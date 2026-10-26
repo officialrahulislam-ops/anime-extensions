@@ -44,7 +44,7 @@ class EmbedExtractor(
         return found.entries
             .sortedBy { if (it.key.substringBefore('?').endsWith(".m3u8")) 0 else 1 }
             .map { (url, tag) ->
-                Video(url = url, quality = "$label $tag", videoUrl = url, headers = playHeaders)
+                Video(videoUrl = url, videoTitle = "$label $tag", headers = playHeaders)
             }
     }
 
